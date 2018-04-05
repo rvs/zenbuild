@@ -116,6 +116,12 @@ run-rootfs: bios/OVMF.fd bios/EFI
 # it gets triggered when we build any kind of image target
 images/%.yml: zedctr-workaround parse-pkgs.sh images/%.yml.in FORCE
 	./parse-pkgs.sh $@.in > $@
+	# the following is a horrible hack that needs to go away ASAP
+	if [ "$(ZARCH)" != `uname -m` ] ; then \
+	   sed -e 's#-amd64\s*$$##' -e 's#-arm64\s*$$##' \
+               -e '/linuxkit|zededa\/[^:]*:/s#\s*$$#-$(DOCKER_ARCH_TAG)#' -E -i.orig $@ ;\
+	   echo "WARNING: We are assembling a $(ZARCH) image on `uname -m`. Things may break." ;\
+        fi
 
 $(ROOTFS_IMG): images/fallback.yml
 	./makerootfs.sh images/fallback.yml squash $@
@@ -132,7 +138,20 @@ $(FALLBACK_IMG).qcow2: $(FALLBACK_IMG).raw
 	rm $<
 
 $(FALLBACK_IMG).raw: $(ROOTFS_IMG) config.img
-	tar c $(ROOTFS_IMG) config.img | ./makeflash.sh -C ${MEDIA_SIZE} $@
+	# FIXME: the following is a workaround for GRUB on aarch64
+	if [ "$(ZARCH)" == aarch64 ] ; then \
+	  rm -f grub.tar 2>/dev/null || : ;\
+          $(DOCKER_UNPACK) $(shell make -s -C pkg PKGS=grub show-tag)-$(DOCKER_ARCH_TAG) EFI ;\
+	  mv EFI/BOOT/BOOTAA64.EFI EFI/BOOT/B ; rm -f EFI/BOOT/BOOT* ; mv EFI/BOOT/B EFI/BOOT/BOOTAA64.EFI ;\
+          (echo 'gptprio.next -d dev -u uuid' ;\
+           echo 'set root=$$dev' ;\
+           echo 'chainloader ($$dev)/EFI/BOOT/BOOTAA64GNU.EFI' ;\
+           echo 'boot' ;\
+           echo 'reboot') > EFI/BOOT/grub.cfg ;\
+          tar cf grub.tar EFI ; rm -rf EFI ;\
+          GRUB_IMG=grub.tar ;\
+        fi ;\
+	tar c $${GRUB_IMG} $(ROOTFS_IMG) config.img | ./makeflash.sh -C ${MEDIA_SIZE} $@
 
 .PHONY: pkg_installer
 pkg_installer: $(ROOTFS_IMG) config.img
