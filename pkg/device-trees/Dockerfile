@@ -1,4 +1,4 @@
-FROM alpine:3.7 as build
+FROM linuxkit/alpine:90571a1a9059f3bf33ca3431bc5396aa837a47d3 as build
 
 COPY virt-gicv3.dts /dt/virt-gicv3.dts
 

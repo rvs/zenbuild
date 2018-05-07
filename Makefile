@@ -139,15 +139,9 @@ $(FALLBACK_IMG).qcow2: $(FALLBACK_IMG).raw
 
 $(FALLBACK_IMG).raw: $(ROOTFS_IMG) config.img
 	# FIXME: the following is a workaround for GRUB on aarch64
-	if [ "$(ZARCH)" == aarch64 ] ; then \
+	if [ "$(ZARCH)" != `uname -m` ] ; then \
 	  rm -f grub.tar 2>/dev/null || : ;\
-          $(DOCKER_UNPACK) $(shell make -s -C pkg PKGS=grub show-tag)-$(DOCKER_ARCH_TAG) EFI ;\
-	  mv EFI/BOOT/BOOTAA64.EFI EFI/BOOT/B ; rm -f EFI/BOOT/BOOT* ; mv EFI/BOOT/B EFI/BOOT/BOOTAA64.EFI ;\
-          (echo 'gptprio.next -d dev -u uuid' ;\
-           echo 'set root=$$dev' ;\
-           echo 'chainloader ($$dev)/EFI/BOOT/BOOTAA64GNU.EFI' ;\
-           echo 'boot' ;\
-           echo 'reboot') > EFI/BOOT/grub.cfg ;\
+	  $(DOCKER_UNPACK) $(shell make -s -C pkg PKGS=grub show-tag)-$(DOCKER_ARCH_TAG) EFI ;\
           tar cf grub.tar EFI ; rm -rf EFI ;\
           GRUB_IMG=grub.tar ;\
         fi ;\
