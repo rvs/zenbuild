@@ -99,7 +99,7 @@ bios/OVMF.fd: bios
 # through the installer. It's the long road to fallback.img. Good for
 # testing.
 #
-run-installer:
+run-installer: bios/OVMF.fd
 	qemu-img create -f ${IMG_FORMAT} target.img ${MEDIA_SIZE}M
 	qemu-system-$(ZARCH) $(QEMU_OPTS) -drive file=target.img,format=$(IMG_FORMAT) -cdrom installer.iso -boot d
 
