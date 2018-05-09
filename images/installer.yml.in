@@ -1,6 +1,6 @@
 kernel:
   image: KERNEL_TAG
-  cmdline: "rootdelay=3 root=/dev/sdb"
+  cmdline: "rootdelay=3"
 init:
   - GRUB_TAG
   - DTREES_TAG

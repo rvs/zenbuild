@@ -10,20 +10,7 @@
 set -e
 [ -n "$DEBUG" ] && set -x
 
-# get the GRUB2 boot file name
-ARCH=$(uname -m)
-case $ARCH in
-x86_64)
-  BOOTFILE=BOOTX64.EFI
-  ROOTDEV=/dev/sr0
-  LINUX_ENTRY=linuxefi
-  ;;
-aarch64)
-  BOOTFILE=BOOTAA64.EFI
-  ROOTDEV=/dev/vda
-  LINUX_ENTRY=linux
-  ;;
-esac
+BOOTFILE=`cd /usr/local/share/ ; echo BOOT*EFI`
 
 mkdir -p /tmp/efi
 cd /tmp/efi
@@ -33,30 +20,9 @@ cd /tmp/efi
 [ -t 0 ] || bsdtar xzf -
 
 CMDLINE="$(cat boot/cmdline)"
-# if no root= root device specified, assume /dev/{sr0, vda} ie first CD drive
-# need to detect the root device automatically in the future
-echo "${CMDLINE}" | grep -q 'root=' || CMDLINE="${CMDLINE} root=${ROOTDEV}"
-rm boot/cmdline
+sed -i'' -e "/set *linuxkit_cmdline=/s#=.*\$#=$CMDLINE#" EFI/BOOT/grub.cfg
 
 cp /usr/local/share/$BOOTFILE .
-
-CMDLINESR=`echo ${CMDLINE} | sed -e 's#sdb#sr0#'`
-
-mkdir -p EFI/BOOT
-cat > EFI/BOOT/grub.cfg <<EOF
-set timeout=5
-set gfxpayload=text
-set default=${ZEN_DEFAULT_BOOT:-0}
-
-menuentry 'LinuxKit ISO Image' {
-	multiboot2 /boot/xen.gz
-	module2 /boot/kernel console=tty0 ${CMDLINE} text
-}
-menuentry 'LinuxKit ISO Image on QEMU' {
-	multiboot2 /boot/xen.gz clocksource=pit console=com1
-	module2 /boot/kernel console=hvc0 clocksource=tsc clocksource_failover=xen ${CMDLINESR} ro text
-}
-EOF
 
 # create a ISO with a EFI boot partition
 # Stuff it into a FAT filesystem, making it as small as possible.  511KiB

@@ -15,9 +15,11 @@ IMGA_FILE=`echo /parts/rootfs*.img | cut -f1 -d\ `
 CONF_FILE=/parts/config.img
 
 #
-# Step 1.1: FIXME: this is a horrible hack that needs to go away ASAP
+# Step 1.1: Extract a GRUB bootloader
 #
-[ -f /parts/grub.tar ] && tar -C /efifs -xf /parts/grub.tar
+mount -o loop "$IMGA_FILE" /mnt
+cp /mnt/EFI/BOOT/BOOT*EFI /efifs/EFI/BOOT/
+umount /mnt
 
 IMAGE_SIZE=$(( 300 * 1024 * 1024 ))
 
