@@ -9,9 +9,11 @@ RUN apk add --no-cache \
   sgdisk \
   coreutils
 
+# NOTE: the order here matters, since mkflash has a custom
+# grub.cfg that needs to override the default grub's one 
+COPY --from=grub / /efifs/
 COPY --from=mkflash make-flash .
 COPY --from=mkflash /efifs /efifs
-COPY --from=grub / /efifs/
 WORKDIR /parts
 COPY config.img .
 COPY rootfs.img .

@@ -10,7 +10,9 @@ RUN apk add --no-cache \
 
 WORKDIR /
 COPY make-flash .
-COPY /efi-files /efifs
+# NOTE: the order matters here since we have a custome grub.cfg
+# that needs to overwrite the one coming from default grub
 COPY --from=grub / /efifs/
+COPY /efi-files /efifs
 
 ENTRYPOINT [ "/make-flash" ]
