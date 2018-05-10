@@ -11,8 +11,22 @@ init:
   - linuxkit/getty:v0.3
 onboot:
   - name: installer
-    image: INSTALLER_TAG
-    command: ["/install.sh", "/dev/sda"]
+    image: MKFLASH_TAG
+    command: ["/bin/sh", "-xc", "/make-flash /dev/sda ; sync ; sleep 5 ; sync ; poweroff -f"]
+#    command: ["/bin/sh", "-c", "/make-flash /dev/sda & while true ; do sleep 5 ; done"]
+    pid: host
+    binds:
+      - /parts:/parts
+      - /dev:/dev
+    capabilities:
+      - all
+files:
+  - path: /parts/config.img
+    source: config.img
+    mode: "0660"
+  - path: /parts/rootfs.img
+    source: rootfs.img
+    mode: "0660"
 trust:
   org:
     - linuxkit

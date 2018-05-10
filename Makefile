@@ -140,22 +140,17 @@ $(FALLBACK_IMG).qcow2: $(FALLBACK_IMG).raw
 $(FALLBACK_IMG).raw: $(ROOTFS_IMG) config.img
 	tar c $(ROOTFS_IMG) config.img | ./makeflash.sh -C ${MEDIA_SIZE} $@
 
-.PHONY: pkg_installer
-pkg_installer: $(ROOTFS_IMG) config.img
-	cp $(ROOTFS_IMG) config.img pkg/installer
-	make -C pkg PKGS=installer LINUXKIT_OPTS="--disable-content-trust --disable-cache --force" $(DEFAULT_PKG_TARGET)
-
 #
 # INSTALLER IMAGE CREATION:
 #
 # Use makeiso instead of linuxkit own's format because the
 # former are able to boot on our platforms.
 
-installer.iso: images/installer.yml pkg_installer
+installer.iso: images/installer.yml
 	./makeiso.sh images/installer.yml installer.iso	
 
-installer.img: images/installer.yml pkg_installer
-	./makeraw.sh images/installer.yml installer.iso
+installer.img: images/installer.yml
+	./makeraw.sh images/installer.yml installer.img
 
 publish: Makefile config.img installer.iso bios/OVMF.fd $(ROOTFS_IMG) $(FALLBACK_IMG).img
 	cp $^ build-pkgs/zenix
