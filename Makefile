@@ -23,6 +23,10 @@ TARGET_IMG_aarch64=target_aarch64.img
 TARGET_IMG_x86_64=target.img
 TARGET_IMG=$(TARGET_IMG_$(ZARCH))
 
+INSTALLER_IMG_aarch64=installer_aarch64
+INSTALLER_IMG_x86_64=installer
+INSTALLER_IMG=$(INSTALLER_IMG_$(ZARCH))
+
 QEMU_OPTS_aarch64= -machine virt,gic_version=3 -machine virtualization=true -cpu cortex-a57 -machine type=virt
 # -drive file=./bios/flash0.img,format=raw,if=pflash -drive file=./bios/flash1.img,format=raw,if=pflash
 # [ -f bios/flash1.img ] || dd if=/dev/zero of=bios/flash1.img bs=1048576 count=64
@@ -101,7 +105,7 @@ bios/OVMF.fd: bios
 #
 run-installer: bios/OVMF.fd
 	qemu-img create -f ${IMG_FORMAT} target.img ${MEDIA_SIZE}M
-	qemu-system-$(ZARCH) $(QEMU_OPTS) -drive file=target.img,format=$(IMG_FORMAT) -cdrom installer.iso -boot d
+	qemu-system-$(ZARCH) $(QEMU_OPTS) -drive file=$(TARGET_IMG),format=$(IMG_FORMAT) -cdrom $(INSTALLER_IMG) -boot d
 
 run-fallback run: bios/OVMF.fd
 	qemu-system-$(ZARCH) $(QEMU_OPTS) -drive file=$(FALLBACK_IMG).img,format=$(IMG_FORMAT)
@@ -123,11 +127,11 @@ images/%.yml: zedctr-workaround parse-pkgs.sh images/%.yml.in FORCE
 	   echo "WARNING: We are assembling a $(ZARCH) image on `uname -m`. Things may break." ;\
         fi
 
-$(ROOTFS_IMG): images/fallback.yml
-	./makerootfs.sh images/fallback.yml squash $@
-
 config.img: conf/server conf/onboard.cert.pem conf/
 	./maketestconfig.sh $(CONF_DIR) config.img
+
+$(ROOTFS_IMG): images/fallback.yml
+	./makerootfs.sh images/fallback.yml squash $@
 
 $(FALLBACK_IMG).img: $(FALLBACK_IMG).$(IMG_FORMAT)
 	@rm -f $@ >/dev/null 2>&1 || :
@@ -138,19 +142,13 @@ $(FALLBACK_IMG).qcow2: $(FALLBACK_IMG).raw
 	rm $<
 
 $(FALLBACK_IMG).raw: $(ROOTFS_IMG) config.img
-	tar c $(ROOTFS_IMG) config.img | ./makeflash.sh -C ${MEDIA_SIZE} $@
+	tar c $^ | ./makeflash.sh -C ${MEDIA_SIZE} $@
 
-#
-# INSTALLER IMAGE CREATION:
-#
-# Use makeiso instead of linuxkit own's format because the
-# former are able to boot on our platforms.
+$(INSTALLER_IMG).iso: images/installer.yml
+	./makeiso.sh $^ $@
 
-installer.iso: images/installer.yml
-	./makeiso.sh images/installer.yml installer.iso	
-
-installer.img: images/installer.yml
-	./makeraw.sh images/installer.yml installer.img
+$(INSTALLER_IMG).raw: images/installer.yml
+	./makeraw.sh $^ $@
 
 publish: Makefile config.img installer.iso bios/OVMF.fd $(ROOTFS_IMG) $(FALLBACK_IMG).img
 	cp $^ build-pkgs/zenix
