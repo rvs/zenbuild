@@ -4,7 +4,6 @@
 # output is an iso on stdout
 #
 # The following env variables change the behaviour of this script
-#     ZEN_DEFAULT_BOOT - sets the default GRUB menu entry
 #     DEBUG - makes this script verbose
 
 set -e
